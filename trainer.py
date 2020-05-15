@@ -18,6 +18,9 @@ MAX_EPOCH = 10000
 
 from nmtlab.utils import OPTS
 
+from torch.utils.tensorboard import SummaryWriter 
+writer = SummaryWriter('./log')
+
 
 
 class RENILANMTTrainer(TrainerKit):
@@ -53,6 +56,12 @@ class RENILANMTTrainer(TrainerKit):
         #    self.gen_trainer.train(batch)
         vars = self.extract_vars(batch)
         val_map = self._model(*vars)
+        #tensorboard
+        writer.add_scalar('Model/Generator_loss', val_map["loss"], self._global_step)
+        writer.add_scalar('Model/Discriminator_loss', val_map["dis_loss"], self._global_step)
+        writer.add_scalar('R&F/Fake_loss', val_map["fake_loss"], self._global_step)
+        writer.add_scalar('R&F/Real_loss', val_map["real_loss"], self._global_step)
+        
         self.print_progress(val_map)
         self.record_train_scores(val_map)
         self._global_step += 1
