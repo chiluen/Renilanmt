@@ -1,0 +1,27 @@
+Metadata-Version: 1.1
+Name: nmtlab
+Version: 0.7.3
+Summary: A simple framework for neural machine translation based on PyTorch
+Home-page: https://github.com/zomux/nmtlab
+Author: Raphael Shu
+Author-email: raphael@uaca.com
+License: MIT
+Download-URL: http://pypi.python.org/pypi/nmtlab
+Description: UNKNOWN
+Keywords: Deep learning  Neural network  Natural language processing  Machine Translation
+Platform: any
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.1
+Classifier: Programming Language :: Python :: 3.2
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: Text Processing :: Linguistic
