@@ -22,7 +22,7 @@ class DisLSTM(nn.Module):
         self.rnn = nn.LSTM(input_size, hidden_size, n_layers, batch_first=True, bidirectional = False)
         self.fc1 = nn.Linear(hidden_size, int(hidden_size/4))
         self.fc2 = nn.Linear(int(hidden_size/4), 1)
-        self.bn1 = nn.BatchNorm1d(int(hidden_size/4))
+        #self.bn1 = nn.BatchNorm1d(int(hidden_size/4))
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -34,7 +34,7 @@ class DisLSTM(nn.Module):
         out = self.relu(out)
         #out = self.bn1(out)
         out = self.fc2(out)
-        #out = torch.sigmoid(out) wgan
+        #out = torch.sigmoid(out) 
         return out
 
     def init_hidden(self, batch_size):

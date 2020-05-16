@@ -186,6 +186,9 @@ class LANMTModel(Transformer):
         mean_z = ((z + prior_states) * z_mask[:, :, None]).sum(1) / z_mask.sum(1)[:, None]
         logits = self.length_predictor(mean_z)
         delta = logits.argmax(-1) - 50
+
+        delta = torch.clamp(delta, min = 1)
+        
         return delta
 
     def compute_final_loss(self, q_prob, prior_prob, x_mask, score_map):

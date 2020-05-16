@@ -24,25 +24,21 @@ class RENILANMTModel(LANMTModel):
         self.dis_decoder_layers = dis_decoder_layers
         self.dis_embed_size = dis_embed_size
         super(RENILANMTModel, self).__init__(**kwargs)
-        self.dis = Discriminator(self._src_vocab_size, self.dis_embed_size, self.dis_hidden_size, self.dis_decoder_layers, batch_first=True, bidirectional=False)
+        self.dis = Discriminator(self._tgt_vocab_size, self.dis_embed_size, self.dis_hidden_size, self.dis_decoder_layers, batch_first=True, bidirectional=False)
         self.gen = LANMTModel_M(self.dis.get_fake_loss, **kwargs)
-
+        self.dis.get_translate(self.gen.translate)
     def prepare(self):
         pass
 
     def forward(self,x,y, sampling=False, return_code=False):
         score_map = {}
-        fake_y, _, _ = self.gen.translate(x)
-        fake_y = fake_y.detach()
-        dis_val_map = self.dis(fake_y,y)
+        dis_val_map = self.dis(x,y)
+        #---dis loss to be dis_loss---#
         dis_val_map['dis_loss'] = dis_val_map.pop('loss')
         gen_val_map = self.gen(x,y,sampling,return_code)
         score_map.update(dis_val_map)
         score_map.update(gen_val_map)
         return score_map
-
-    def get_gen_model(self):
-        return self.gen
 
 
 class LANMTModel_M(LANMTModel):
@@ -77,7 +73,7 @@ class LANMTModel_M(LANMTModel):
             word_acc = self.compute_word_accuracy(logits, tgt_seq[i:j], tgt_mask[i:j], denominator=denom,
                                                   ignore_first_token=ignore_first_token)
             score_map["loss"].append(loss)
-            loss = loss + (reward*1)
+            loss = loss + (-reward*1)
             score_map["word_acc"].append(word_acc)
             if i >= B - self._shard_size:
                 # Enable the backward hooks to gather the gradients
@@ -103,8 +99,8 @@ class LANMTModel_M(LANMTModel):
         return monitors, state_tensors, grads
 
 class Discriminator(nn.Module):
-    def __init__(self, src_vocab_size, input_size, hidden_size, n_layers, batch_first=True, bidirectional=False):
-        self.src_vocab_size = src_vocab_size
+    def __init__(self, tgt_vocab_size, input_size, hidden_size, n_layers, batch_first=True, bidirectional=False):
+        self.tgt_vocab_size = tgt_vocab_size
         self.hidden_size = hidden_size
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -112,20 +108,30 @@ class Discriminator(nn.Module):
         self.batch_first = batch_first
         self.bidirectional = bidirectional
         super().__init__()
-        self.embed_layer = TransformerEmbedding(self.src_vocab_size, self.hidden_size)
+        #self.embed_layer = TransformerEmbedding(self.tgt_vocab_size, self.hidden_size)
+        self.embed_layer = nn.Embedding(self.tgt_vocab_size, self.hidden_size)
         self.dis = DisLSTM(self.input_size, self.hidden_size, self.n_layers, self.batch_first, self.bidirectional)
-
+        self.translate = None
+        self.criterion = nn.BCELoss()
     def prepare(self):
         pass
-    def forward(self,x,y):
+    def forward(self, x, y):
         score_map = {'loss': 0}
+        #---real----#
         output = self.dis(self.embed_layer(y)).view(-1)
-        loss = self.compute_loss(output,1)
+        loss = self.compute_wgan_loss(output,1)
         score_map.update(loss)
-        output = self.dis(self.embed_layer(x)).view(-1)
-        loss = self.compute_loss(output,0)
+        #---fake----#
+        assert self.translate is not None
+        fake, _, _ = self.translate(x)
+        fake = fake.detach()
+        output = self.dis(self.embed_layer(fake)).view(-1)
+        loss = self.compute_wgan_loss(output,0)
         score_map.update(loss)
+        #---WGAN---#
         score_map['loss'] = score_map['fake_loss'] - score_map['real_loss']
+        #---DCGAN---#
+        #score_map['loss'] = score_map['fake_loss'] + score_map['real_loss']
         is_grad_enabled = torch.is_grad_enabled()
         if is_grad_enabled:
             score_map['loss'].backward()
@@ -137,6 +143,23 @@ class Discriminator(nn.Module):
         return output
 
     def compute_loss(self, x, label):
+        if label > 0 :
+            loss_name = "real_loss"
+        else:
+            loss_name = "fake_loss"
+        #B = [*x.shape]
+        B = x.shape
+        x_label = torch.full(B , label)
+        if torch.cuda.is_available():
+            x_label = x_label.cuda()
+            x = x.cuda()
+        loss = self.criterion(x, x_label)
+        scores = {
+            loss_name: loss
+        }
+        return scores
+
+    def compute_wgan_loss(self, x, label):
         loss={}
         x=x.mean()
         if label == 1:
@@ -144,4 +167,11 @@ class Discriminator(nn.Module):
         else:
             loss={'fake_loss':x}
         return loss
-
+    def get_translate(self,gen_translate):
+        self.translate = gen_translate
+        return True
+    def to_float(self, x):
+        #if self._fp16:
+        #    return x.half()
+        #else:
+        return x.float()

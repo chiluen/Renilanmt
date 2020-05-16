@@ -66,8 +66,9 @@ ap.add_argument("--opt_longertrain", action="store_true")
 ap.add_argument("--opt_dis_hiddensz", type=int, default=512)
 ap.add_argument("--opt_dis_embedsz", type=int, default=512)
 ap.add_argument("--opt_dis_decoderl", type=int, default=6, help="number of dis_decoder layers")
-ap.add_argument("--opt_dis_pretrain", action="store_true")
-ap.add_argument("--opt_gen_pretrain", action="store_true")
+ap.add_argument("--opt_dis_pretrain", action="store_true", default=False)
+ap.add_argument("--opt_dis_train_only", action="store_true", default=False)
+ap.add_argument("--opt_gen_pretrain", action="store_true", default=False)
 ap.add_argument("--opt_dis_clip_norm", type=float, default=0.1)
 ap.add_argument("--opt_dis_1GXD", type=int, default=1)
 # Options for LANMT
@@ -196,7 +197,7 @@ if OPTS.gen_pretrain:
         print("The model for {} doesn't exist".format(OPTS.dtok))
     model_path = PRETRAINED_MODEL_MAP[OPTS.dtok]
     print("loading pretrained Generator model in {}".format(model_path))
-    gen_model = rnmt.get_gen_model()
+    gen_model = rnmt.gen
     first_param = next(gen_model.parameters())
     device_str = str(first_param.device)
     state_dict = torch.load(model_path, map_location=device_str)

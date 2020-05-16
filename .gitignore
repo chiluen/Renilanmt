@@ -1,3 +1,7 @@
 lanmt/mydata/*
 __pycache__
 !lanmt/mydata/.keep
+
+log/*
+!log/.keep
+
